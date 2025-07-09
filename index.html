@@ -1,425 +1,181 @@
-<!DOCTYPE html>
+import os
+import zipfile
+
+base_dir = "video_converter_app"
+folders = [
+    base_dir,
+    f"{base_dir}/templates",
+    f"{base_dir}/static",
+    f"{base_dir}/uploads",
+    f"{base_dir}/converted"
+]
+
+for folder in folders:
+    os.makedirs(folder, exist_ok=True)
+
+app_py_content = '''from flask import Flask, render_template, request, send_from_directory, jsonify
+import os
+from moviepy.editor import VideoFileClip
+
+app = Flask(__name__)
+
+UPLOAD_FOLDER = 'uploads'
+CONVERTED_FOLDER = 'converted'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(CONVERTED_FOLDER, exist_ok=True)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files['video']
+    if not file:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+
+    clip = VideoFileClip(filepath)
+    hd_filename = "converted_hd_" + file.filename
+    hd_filepath = os.path.join(CONVERTED_FOLDER, hd_filename)
+    clip.write_videofile(hd_filepath, bitrate="5000k")
+
+    return jsonify({'download_url': f"/download/{hd_filename}"})
+
+@app.route('/download/<filename>')
+def download(filename):
+    return send_from_directory(CONVERTED_FOLDER, filename, as_attachment=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+'''
+
+index_html_content = '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bakroond Rani - Video to HD Converter</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --pink: #FF3E9D;
-            --purple: #8A2BE2;
-            --blue: #00B4FF;
-            --green: #00D998;
-            --yellow: #FFD700;
-            --red: #FF4D4D;
-            --dark: #222222;
-            --light: #F8F9FA;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Montserrat', sans-serif;
-            background: linear-gradient(135deg, #FFDEE9, #B5FFFC);
-            color: var(--dark);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Header */
-        header {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px 0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Poppins', sans-serif;
-            font-size: 28px;
-            font-weight: 700;
-            background: linear-gradient(45deg, var(--pink), var(--purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        nav ul {
-            display: flex;
-            list-style: none;
-        }
-
-        nav ul li {
-            margin-left: 25px;
-        }
-
-        nav ul li a {
-            text-decoration: none;
-            color: var(--dark);
-            font-weight: 600;
-            transition: color 0.3s;
-        }
-
-        nav ul li a:hover {
-            color: var(--pink);
-        }
-
-        /* Hero Section */
-        .hero {
+            font-family: Arial, sans-serif;
             text-align: center;
-            padding: 80px 0;
-        }
-
-        .hero h1 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 48px;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, var(--purple), var(--blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero p {
-            font-size: 18px;
-            color: #555;
-            max-width: 700px;
-            margin: 0 auto 40px;
-        }
-
-        /* Upload & Conversion Section */
-        .upload-container {
-            background: white;
-            border-radius: 15px;
+            background: linear-gradient(to right, #ffdde1, #ee9ca7);
             padding: 40px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            margin: 0 auto;
         }
-
-        .upload-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, var(--pink), var(--purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        #file-upload {
-            display: none;
-        }
-
-        .upload-btn {
-            background: linear-gradient(45deg, var(--pink), var(--purple));
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(255, 62, 157, 0.3);
-            transition: transform 0.3s;
-        }
-
-        .upload-btn:hover {
-            transform: translateY(-5px);
-        }
-
-        #file-name {
-            font-weight: bold;
-            color: var(--purple);
-        }
-
-        .progress-container {
-            width: 100%;
-            background: #f0f0f0;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .progress-bar {
-            height: 10px;
-            border-radius: 10px;
-            background: linear-gradient(90deg, var(--pink), var(--blue));
-            width: 0%;
-            transition: width 0.5s;
-        }
-
-        /* Download Section */
-        .download-section {
-            display: none;
-            margin-top: 30px;
-        }
-
-        .download-options {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .download-btn {
-            border: none;
-            padding: 12px 30px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.3s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .download-btn:hover {
-            transform: translateY(-3px);
-        }
-
-        .btn-pink {
-            background: var(--pink);
-            color: white;
-        }
-
-        .btn-blue {
-            background: var(--blue);
-            color: white;
-        }
-
-        /* App Download Section */
-        .app-download {
-            text-align: center;
-            margin: 50px 0;
-        }
-
-        .app-btn {
-            background: linear-gradient(45deg, var(--green), var(--blue));
-            color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            display: inline-block;
-            margin: 10px;
-            box-shadow: 0 5px 15px rgba(0, 180, 255, 0.3);
-        }
-
-        /* Contact Section */
-        .contact {
-            background: white;
-            padding: 50px;
+        .container {
+            background: #fff;
+            padding: 30px;
             border-radius: 15px;
-            margin: 50px auto;
-            max-width: 800px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
-
-        .contact h2 {
-            font-family: 'Poppins', sans-serif;
-            color: var(--purple);
-            margin-bottom: 20px;
-        }
-
-        .contact-email {
-            font-size: 18px;
-            color: var(--dark);
-            margin: 20px 0;
-        }
-
-        .contact-email a {
-            color: var(--pink);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--dark);
+        .btn {
+            padding: 12px 25px;
+            background: #ff4081;
             color: white;
-            padding: 30px 0;
-            text-align: center;
-            margin-top: 50px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
         }
-
-        .footer-logo {
-            font-family: 'Poppins', sans-serif;
-            font-size: 24px;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, var(--pink), var(--blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .progress-bar {
+            margin-top: 20px;
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
         }
-
-        .copyright {
-            font-size: 14px;
-            color: #aaa;
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #ff4081, #2196f3);
+            transition: width 0.3s ease;
         }
-
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 36px;
-            }
-
-            .download-options {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .download-btn {
-                width: 80%;
-                margin-bottom: 10px;
-            }
-        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container header-content">
-            <div class="logo">Bakroond Rani</div>
-            <nav>
-                <ul>
-                    <li><a href="#">Home</a></li>
-                    <li><a href="#convert">Convert</a></li>
-                    <li><a href="#download">Download</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                </ul>
-            </nav>
+    <div class="container">
+        <h2>Upload Video to Convert in HD</h2>
+        <input type="file" id="video-file" accept="video/*"><br>
+        <button class="btn" onclick="uploadVideo()">Upload & Convert</button>
+        
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-bar-fill" id="progress-fill"></div>
         </div>
-    </header>
 
-    <section class="hero">
-        <div class="container">
-            <h1>Convert Videos to HD Quality</h1>
-            <p>Upload any video and get a high-quality HD version instantly. Fast, free, and easy to use!</p>
-            
-            <div class="upload-container" id="convert">
-                <div class="upload-icon">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                </div>
-                <h2>Upload Your Video</h2>
-                <p>Supports MP4, MOV, AVI, MKV, and more!</p>
-                
-                <input type="file" id="file-upload" accept="video/*">
-                <button class="upload-btn" id="upload-btn">
-                    <i class="fas fa-upload"></i> Choose Video
-                </button>
-                
-                <div id="selected-file">
-                    Selected: <span id="file-name">No file selected</span>
-                </div>
-                
-                <div class="progress-container" id="progress-container">
-                    <div class="progress-bar" id="progress-bar"></div>
-                </div>
-                
-                <div class="download-section" id="download-section">
-                    <h3>Your HD Video is Ready!</h3>
-                    <div class="download-options">
-                        <button class="download-btn btn-pink" id="download-hd">
-                            <i class="fas fa-download"></i> Download HD
-                        </button>
-                        <button class="download-btn btn-blue" id="download-fullhd">
-                            <i class="fas fa-download"></i> Download Full HD
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div id="download-link" class="hidden">
+            <h3>Your HD Video is Ready!</h3>
+            <a id="download-btn" class="btn" href="#">Download HD Video</a>
         </div>
-    </section>
-
-    <!-- App Download Section -->
-    <section class="app-download" id="download">
-        <div class="container">
-            <h2>Download Our App</h2>
-            <p>Get the Bakroond Rani Video Converter app for faster conversions!</p>
-            <a href="#" class="app-btn">
-                <i class="fab fa-google-play"></i> Download for Android
-            </a>
-            <a href="#" class="app-btn">
-                <i class="fab fa-apple"></i> Download for iOS
-            </a>
-        </div>
-    </section>
-
-    <!-- Contact Section -->
-    <section class="contact" id="contact">
-        <div class="container">
-            <h2>Contact Us</h2>
-            <p>Have questions or feedback? Reach out to us!</p>
-            <div class="contact-email">
-                Email: <a href="mailto:rs1998328@gmail.com">rs1998328@gmail.com</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-logo">Bakroond Rani</div>
-            <p class="copyright">© 2024 Bakroond Rani Video Converter. All Rights Reserved.</p>
-        </div>
-    </footer>
+    </div>
 
     <script>
-        // File Upload & Conversion Simulation
-        const uploadBtn = document.getElementById('upload-btn');
-        const fileUpload = document.getElementById('file-upload');
-        const fileName = document.getElementById('file-name');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
-        const downloadSection = document.getElementById('download-section');
-
-        uploadBtn.addEventListener('click', () => fileUpload.click());
-
-        fileUpload.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                fileName.textContent = file.name;
-                
-                // Show progress bar
-                progressContainer.style.display = 'block';
-                
-                // Simulate conversion progress
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 10;
-                    progressBar.style.width = `${progress}%`;
-                    
-                    if (progress >= 100) {
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            downloadSection.style.display = 'block';
-                        }, 500);
-                    }
-                }, 300);
+        function uploadVideo() {
+            const fileInput = document.getElementById('video-file');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a video file.");
+                return;
             }
-        });
 
-        // Download Buttons
-        document.getElementById('download-hd').addEventListener('click', () => {
-            alert("HD video download started!");
-        });
+            const formData = new FormData();
+            formData.append('video', file);
 
-        document.getElementById('download-fullhd').addEventListener('click', () => {
-            alert("Full HD video download started!");
-        });
+            const progressBar = document.getElementById('progress-bar');
+            const progressFill = document.getElementById('progress-fill');
+            const downloadSection = document.getElementById('download-link');
+            const downloadBtn = document.getElementById('download-btn');
+
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            downloadSection.classList.add('hidden');
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                progressFill.style.width = '100%';
+                downloadBtn.href = data.download_url;
+                downloadSection.classList.remove('hidden');
+            })
+            .catch(error => {
+                alert("Error uploading or converting video.");
+                console.error(error);
+            });
+        }
     </script>
 </body>
 </html>
+'''
+
+requirements_txt_content = '''Flask
+moviepy
+'''
+
+with open(f"{base_dir}/app.py", "w") as f:
+    f.write(app_py_content)
+
+with open(f"{base_dir}/templates/index.html", "w") as f:
+    f.write(index_html_content)
+
+with open(f"{base_dir}/requirements.txt", "w") as f:
+    f.write(requirements_txt_content)
+
+zip_filename = "video_converter_app.zip"
+with zipfile.ZipFile(zip_filename, 'w') as zipf:
+    for root, _, files in os.walk(base_dir):
+        for file in files:
+            filepath = os.path.join(root, file)
+            arcname = os.path.relpath(filepath, base_dir)
+            zipf.write(filepath, arcname=arcname)
+
+print(f"ZIP created: {zip_filename}")
+
