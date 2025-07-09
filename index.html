@@ -1,181 +1,286 @@
-import os
-import zipfile
-
-base_dir = "video_converter_app"
-folders = [
-    base_dir,
-    f"{base_dir}/templates",
-    f"{base_dir}/static",
-    f"{base_dir}/uploads",
-    f"{base_dir}/converted"
-]
-
-for folder in folders:
-    os.makedirs(folder, exist_ok=True)
-
-app_py_content = '''from flask import Flask, render_template, request, send_from_directory, jsonify
-import os
-from moviepy.editor import VideoFileClip
-
-app = Flask(__name__)
-
-UPLOAD_FOLDER = 'uploads'
-CONVERTED_FOLDER = 'converted'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(CONVERTED_FOLDER, exist_ok=True)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['video']
-    if not file:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(filepath)
-
-    clip = VideoFileClip(filepath)
-    hd_filename = "converted_hd_" + file.filename
-    hd_filepath = os.path.join(CONVERTED_FOLDER, hd_filename)
-    clip.write_videofile(hd_filepath, bitrate="5000k")
-
-    return jsonify({'download_url': f"/download/{hd_filename}"})
-
-@app.route('/download/<filename>')
-def download(filename):
-    return send_from_directory(CONVERTED_FOLDER, filename, as_attachment=True)
-
-if __name__ == '__main__':
-    app.run(debug=True)
-'''
-
-index_html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bakroond Rani - Video to HD Converter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakroond Rani - HD Video Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --pink: #FF3E9D;
+            --purple: #8A2BE2;
+            --blue: #00B4FF;
+            --green: #00D998;
+            --dark: #222222;
+            --light: #f8f9fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: linear-gradient(to right, #ffdde1, #ee9ca7);
-            padding: 40px;
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #FFDEE9, #B5FFFC);
+            color: var(--dark);
+            min-height: 100vh;
         }
+
         .container {
-            background: #fff;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 600px;
-            margin: auto;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
-        .btn {
-            padding: 12px 25px;
-            background: #ff4081;
+
+        header {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--pink), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .upload-container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, var(--pink), var(--purple));
             color: white;
             border: none;
-            border-radius: 30px;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: transform 0.3s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-5px);
+        }
+
+        .progress-container {
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 10px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--pink), var(--blue));
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .download-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .download-btn {
+            background: linear-gradient(45deg, var(--blue), var(--green));
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 50px;
             cursor: pointer;
             margin-top: 20px;
         }
-        .progress-bar {
-            margin-top: 20px;
-            width: 100%;
-            height: 10px;
-            background: #eee;
-            border-radius: 10px;
-            overflow: hidden;
+
+        .file-size-info {
+            margin: 10px 0;
+            color: var(--purple);
+            font-weight: 600;
+        }
+
+        .download-size-info {
+            margin: 15px 0;
+            font-size: 18px;
+            color: var(--dark);
+        }
+
+        .quality-options {
+            margin: 20px 0;
             display: none;
         }
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(to right, #ff4081, #2196f3);
-            transition: width 0.3s ease;
+
+        .quality-btn {
+            background: linear-gradient(45deg, var(--purple), var(--blue));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 50px;
+            cursor: pointer;
         }
-        .hidden { display: none; }
+
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-top: 50px;
+        }
     </style>
 </head>
 <body>
+    <header>
+        <div class="container">
+            <div class="logo">Bakroond Rani HD Converter</div>
+        </div>
+    </header>
+
     <div class="container">
-        <h2>Upload Video to Convert in HD</h2>
-        <input type="file" id="video-file" accept="video/*"><br>
-        <button class="btn" onclick="uploadVideo()">Upload & Convert</button>
-        
-        <div class="progress-bar" id="progress-bar">
-            <div class="progress-bar-fill" id="progress-fill"></div>
+        <div class="upload-container">
+            <h2>Upload Your Video</h2>
+            <p>Convert any video to HD quality and see the output file size before downloading!</p>
+            
+            <input type="file" id="file-upload" accept="video/*" style="display: none;">
+            <button class="upload-btn" id="upload-btn">
+                <i class="fas fa-upload"></i> Choose Video
+            </button>
+            
+            <div id="file-info">No file selected</div>
+            <div id="file-size" class="file-size-info"></div>
+            
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <div class="quality-options" id="quality-options">
+                <h3>Select HD Quality:</h3>
+                <button class="quality-btn" data-quality="720p" data-size-multiplier="0.6">720p HD (Smaller file)</button>
+                <button class="quality-btn" data-quality="1080p" data-size-multiplier="1.0">1080p Full HD (Balanced)</button>
+                <button class="quality-btn" data-quality="4k" data-size-multiplier="1.8">4K Ultra HD (Larger file)</button>
+            </div>
+            
+            <div class="download-section" id="download-section">
+                <h3>Your HD Video is Ready!</h3>
+                <div id="download-info" class="download-size-info"></div>
+                <button class="download-btn" id="download-btn">
+                    <i class="fas fa-download"></i> Download Now
+                </button>
+            </div>
         </div>
 
-        <div id="download-link" class="hidden">
-            <h3>Your HD Video is Ready!</h3>
-            <a id="download-btn" class="btn" href="#">Download HD Video</a>
+        <div class="contact" style="text-align: center; margin: 50px 0;">
+            <h2>Contact Us</h2>
+            <p>Email: <a href="mailto:rs1998328@gmail.com">rs1998328@gmail.com</a></p>
         </div>
     </div>
 
+    <footer>
+        <div class="container">
+            <p>© 2024 Bakroond Rani Video Converter</p>
+        </div>
+    </footer>
+
     <script>
-        function uploadVideo() {
-            const fileInput = document.getElementById('video-file');
-            const file = fileInput.files[0];
-            if (!file) {
-                alert("Please select a video file.");
-                return;
+        // Video Upload and Conversion
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileUpload = document.getElementById('file-upload');
+        const fileInfo = document.getElementById('file-info');
+        const fileSizeInfo = document.getElementById('file-size');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const qualityOptions = document.getElementById('quality-options');
+        const downloadSection = document.getElementById('download-section');
+        const downloadInfo = document.getElementById('download-info');
+        const downloadBtn = document.getElementById('download-btn');
+        
+        let originalFileSize = 0;
+        let selectedQuality = '1080p';
+        let sizeMultiplier = 1.0;
+
+        uploadBtn.addEventListener('click', () => fileUpload.click());
+
+        fileUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                fileInfo.textContent = `Selected: ${file.name}`;
+                
+                // Calculate and show file size
+                originalFileSize = file.size;
+                const fileSizeMB = (originalFileSize / (1024 * 1024)).toFixed(1);
+                fileSizeInfo.textContent = `Original Size: ${fileSizeMB} MB`;
+                
+                // Show quality options
+                qualityOptions.style.display = 'block';
+                progressContainer.style.display = 'none';
+                downloadSection.style.display = 'none';
             }
+        });
 
-            const formData = new FormData();
-            formData.append('video', file);
-
-            const progressBar = document.getElementById('progress-bar');
-            const progressFill = document.getElementById('progress-fill');
-            const downloadSection = document.getElementById('download-link');
-            const downloadBtn = document.getElementById('download-btn');
-
-            progressBar.style.display = 'block';
-            progressFill.style.width = '0%';
-            downloadSection.classList.add('hidden');
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                progressFill.style.width = '100%';
-                downloadBtn.href = data.download_url;
-                downloadSection.classList.remove('hidden');
-            })
-            .catch(error => {
-                alert("Error uploading or converting video.");
-                console.error(error);
+        // Quality selection
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                selectedQuality = this.getAttribute('data-quality');
+                sizeMultiplier = parseFloat(this.getAttribute('data-size-multiplier'));
+                
+                // Show progress bar
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                
+                // Simulate HD conversion
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        
+                        // Calculate and show download size
+                        const outputSizeMB = (originalFileSize * sizeMultiplier / (1024 * 1024)).toFixed(1);
+                        downloadInfo.innerHTML = `
+                            Quality: <strong>${selectedQuality}</strong><br>
+                            Download Size: <strong>${outputSizeMB} MB</strong>
+                        `;
+                        
+                        downloadSection.style.display = 'block';
+                    }
+                }, 300);
             });
-        }
+        });
+
+        // Video Download
+        downloadBtn.addEventListener('click', () => {
+            const outputSizeMB = (originalFileSize * sizeMultiplier / (1024 * 1024)).toFixed(1);
+            alert(`Downloading ${selectedQuality} video (${outputSizeMB} MB)...`);
+            
+            // For demo purposes, we'll create a dummy download
+            const blob = new Blob(["This would be your HD video file"], {type: 'video/mp4'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `converted_${selectedQuality}_video.mp4`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     </script>
 </body>
 </html>
-'''
-
-requirements_txt_content = '''Flask
-moviepy
-'''
-
-with open(f"{base_dir}/app.py", "w") as f:
-    f.write(app_py_content)
-
-with open(f"{base_dir}/templates/index.html", "w") as f:
-    f.write(index_html_content)
-
-with open(f"{base_dir}/requirements.txt", "w") as f:
-    f.write(requirements_txt_content)
-
-zip_filename = "video_converter_app.zip"
-with zipfile.ZipFile(zip_filename, 'w') as zipf:
-    for root, _, files in os.walk(base_dir):
-        for file in files:
-            filepath = os.path.join(root, file)
-            arcname = os.path.relpath(filepath, base_dir)
-            zipf.write(filepath, arcname=arcname)
-
-print(f"ZIP created: {zip_filename}")
 
