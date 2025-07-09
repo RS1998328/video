@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bakroond Rani - HD Video Converter</title>
+    <title>Bakroond Rani - Video to HD Converter</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -102,7 +102,7 @@
             margin: 0 auto 40px;
         }
 
-        /* Upload & Download Section */
+        /* Upload & Conversion Section */
         .upload-container {
             background: white;
             border-radius: 15px;
@@ -118,6 +118,10 @@
             background: linear-gradient(45deg, var(--pink), var(--purple));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        #file-upload {
+            display: none;
         }
 
         .upload-btn {
@@ -138,11 +142,38 @@
             transform: translateY(-5px);
         }
 
+        #file-name {
+            font-weight: bold;
+            color: var(--purple);
+        }
+
+        .progress-container {
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 10px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--pink), var(--blue));
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        /* Download Section */
+        .download-section {
+            display: none;
+            margin-top: 30px;
+        }
+
         .download-options {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-top: 30px;
+            margin-top: 20px;
             flex-wrap: wrap;
         }
 
@@ -171,19 +202,51 @@
             color: white;
         }
 
-        .btn-green {
-            background: var(--green);
-            color: white;
+        /* App Download Section */
+        .app-download {
+            text-align: center;
+            margin: 50px 0;
         }
 
-        .btn-yellow {
-            background: var(--yellow);
-            color: black;
+        .app-btn {
+            background: linear-gradient(45deg, var(--green), var(--blue));
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0, 180, 255, 0.3);
         }
 
-        .btn-red {
-            background: var(--red);
-            color: white;
+        /* Contact Section */
+        .contact {
+            background: white;
+            padding: 50px;
+            border-radius: 15px;
+            margin: 50px auto;
+            max-width: 800px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .contact h2 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--purple);
+            margin-bottom: 20px;
+        }
+
+        .contact-email {
+            font-size: 18px;
+            color: var(--dark);
+            margin: 20px 0;
+        }
+
+        .contact-email a {
+            color: var(--pink);
+            text-decoration: none;
+            font-weight: 600;
         }
 
         /* Footer */
@@ -233,9 +296,9 @@
             <nav>
                 <ul>
                     <li><a href="#">Home</a></li>
-                    <li><a href="#">Convert</a></li>
-                    <li><a href="#">Download</a></li>
-                    <li><a href="#">Contact</a></li>
+                    <li><a href="#convert">Convert</a></li>
+                    <li><a href="#download">Download</a></li>
+                    <li><a href="#contact">Contact</a></li>
                 </ul>
             </nav>
         </div>
@@ -244,40 +307,69 @@
     <section class="hero">
         <div class="container">
             <h1>Convert Videos to HD Quality</h1>
-            <p>Upload your videos and get high-quality HD versions instantly. Fast, free, and easy to use!</p>
+            <p>Upload any video and get a high-quality HD version instantly. Fast, free, and easy to use!</p>
             
-            <div class="upload-container">
+            <div class="upload-container" id="convert">
                 <div class="upload-icon">
                     <i class="fas fa-cloud-upload-alt"></i>
                 </div>
                 <h2>Upload Your Video</h2>
                 <p>Supports MP4, MOV, AVI, MKV, and more!</p>
                 
-                <button class="upload-btn">
-                    <i class="fas fa-upload"></i> Upload Video
+                <input type="file" id="file-upload" accept="video/*">
+                <button class="upload-btn" id="upload-btn">
+                    <i class="fas fa-upload"></i> Choose Video
                 </button>
                 
-                <div class="download-options">
-                    <button class="download-btn btn-pink">
-                        <i class="fas fa-download"></i> Download (HD)
-                    </button>
-                    <button class="download-btn btn-blue">
-                        <i class="fas fa-download"></i> Download (Full HD)
-                    </button>
-                    <button class="download-btn btn-green">
-                        <i class="fas fa-download"></i> Download (4K)
-                    </button>
-                    <button class="download-btn btn-yellow">
-                        <i class="fas fa-download"></i> Fast Download
-                    </button>
-                    <button class="download-btn btn-red">
-                        <i class="fas fa-download"></i> Premium Download
-                    </button>
+                <div id="selected-file">
+                    Selected: <span id="file-name">No file selected</span>
+                </div>
+                
+                <div class="progress-container" id="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                
+                <div class="download-section" id="download-section">
+                    <h3>Your HD Video is Ready!</h3>
+                    <div class="download-options">
+                        <button class="download-btn btn-pink" id="download-hd">
+                            <i class="fas fa-download"></i> Download HD
+                        </button>
+                        <button class="download-btn btn-blue" id="download-fullhd">
+                            <i class="fas fa-download"></i> Download Full HD
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- App Download Section -->
+    <section class="app-download" id="download">
+        <div class="container">
+            <h2>Download Our App</h2>
+            <p>Get the Bakroond Rani Video Converter app for faster conversions!</p>
+            <a href="#" class="app-btn">
+                <i class="fab fa-google-play"></i> Download for Android
+            </a>
+            <a href="#" class="app-btn">
+                <i class="fab fa-apple"></i> Download for iOS
+            </a>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2>Contact Us</h2>
+            <p>Have questions or feedback? Reach out to us!</p>
+            <div class="contact-email">
+                Email: <a href="mailto:rs1998328@gmail.com">rs1998328@gmail.com</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer>
         <div class="container">
             <div class="footer-logo">Bakroond Rani</div>
@@ -286,12 +378,47 @@
     </footer>
 
     <script>
-        // Simple animation for download buttons
-        const downloadButtons = document.querySelectorAll('.download-btn');
-        downloadButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                alert("Your download will start shortly. Thank you for using Bakroond Rani!");
-            });
+        // File Upload & Conversion Simulation
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileUpload = document.getElementById('file-upload');
+        const fileName = document.getElementById('file-name');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const downloadSection = document.getElementById('download-section');
+
+        uploadBtn.addEventListener('click', () => fileUpload.click());
+
+        fileUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                fileName.textContent = file.name;
+                
+                // Show progress bar
+                progressContainer.style.display = 'block';
+                
+                // Simulate conversion progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            downloadSection.style.display = 'block';
+                        }, 500);
+                    }
+                }, 300);
+            }
+        });
+
+        // Download Buttons
+        document.getElementById('download-hd').addEventListener('click', () => {
+            alert("HD video download started!");
+        });
+
+        document.getElementById('download-fullhd').addEventListener('click', () => {
+            alert("Full HD video download started!");
         });
     </script>
 </body>
